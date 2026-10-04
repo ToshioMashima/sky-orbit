@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#080f18">
+  <meta name="description" content="探索太阳、地球与月亮的运动。在任意经纬度、日期和时间，从地面与太空观察真实天文位置。支持离线。">
+  <title>天际 · 日地月模拟器</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230a1522'/%3E%3Ccircle cx='32' cy='32' r='13' fill='%2376dfc7'/%3E%3Cellipse cx='32' cy='32' rx='27' ry='10' fill='none' stroke='%23ffffff' stroke-width='2' transform='rotate(-35 32 32)'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="vendor/astronomy.browser.min.js"></script>
+  <script defer src="vendor/three.min.js"></script>
+  <script defer src="vendor/land.js"></script>
+  <script defer src="astronomy-core.js"></script>
+  <script defer src="scene.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="天际首页"><span class="brand-orbit">◉</span><span>天际<span class="brand-en">SKY / ORBIT</span></span></a>
+    <div class="header-description">太阳 · 地球 · 月亮 <span>交互天文实验室</span></div>
+    <button id="helpButton" class="quiet-button">使用指南 <span>↗</span></button>
+  </header>
+  <main class="workspace">
+    <aside class="sidebar">
+      <div class="eyebrow">YOUR OBSERVATORY</div>
+      <h1>换个角度，看宇宙。</h1>
+      <p class="intro">让时间流动，探索你与日月的位置。</p>
+      <section class="control-section">
+        <div class="section-title"><span><b>01</b> 观察视角</span><span class="tiny">VIEWPOINT</span></div>
+        <div class="view-tabs" role="group" aria-label="观察视角">
+          <button id="groundView" class="active" aria-pressed="true"><span>⌖</span> 地面视角</button>
+          <button id="spaceView" aria-pressed="false"><span>◎</span> 太空视角</button>
+        </div>
+        <div id="spaceOptions" class="space-options" hidden><label for="spaceScale">观察范围</label><select id="spaceScale"><option value="earth">地球附近 · 日月方位</option><option value="solar">太阳系 · 地球公转</option></select></div>
+      </section>
+      <section class="control-section">
+        <div class="section-title"><span><b>02</b> 观测地点</span><button id="locate" class="text-button" title="需要浏览器位置权限">⌖ 我的位置</button></div>
+        <label class="sr-only" for="city">快速选择地点</label>
+        <select id="city"><option value="beijing">中国 · 北京</option><option value="shanghai">中国 · 上海</option><option value="singapore">新加坡</option><option value="london">英国 · 伦敦</option><option value="sydney">澳大利亚 · 悉尼</option><option value="quito">厄瓜多尔 · 赤道</option><option value="tromso">挪威 · 特罗姆瑟</option><option value="north">北极</option><option value="south">南极</option><option value="custom">自定义坐标</option></select>
+        <div class="slider-label"><label for="latitude">纬度</label><span><input id="latitudeNumber" aria-label="纬度数值" type="number" min="-90" max="90" step="0.01" value="39.90"><span id="latitudeSuffix">° N</span></span></div>
+        <input id="latitude" type="range" min="-90" max="90" step="0.01" value="39.90">
+        <div class="range-ends"><span>90° S</span><span>赤道</span><span>90° N</span></div>
+        <div class="slider-label"><label for="longitude">经度</label><span><input id="longitudeNumber" aria-label="经度数值" type="number" min="-180" max="180" step="0.01" value="116.40"><span id="longitudeSuffix">° E</span></span></div>
+        <input id="longitude" type="range" min="-180" max="180" step="0.01" value="116.40">
+        <div class="range-ends"><span>180° W</span><span>本初子午线</span><span>180° E</span></div>
+      </section>
+      <section class="control-section">
+        <div class="section-title"><span><b>03</b> 日期与时间</span><button id="now" class="text-button">回到此刻 ↺</button></div>
+        <div class="date-row"><label>日期<input id="date" type="date" min="1900-01-01" max="2100-12-31"></label><label>时间<input id="time" type="time" step="1"></label></div>
+        <label class="timezone-label" for="timezone">显示时区 <select id="timezone"><option value="8">UTC+08:00 · 北京 / 新加坡</option><option value="0">UTC+00:00</option><option value="1">UTC+01:00</option><option value="2">UTC+02:00</option><option value="5.5">UTC+05:30</option><option value="5.75">UTC+05:45</option><option value="9">UTC+09:00</option><option value="10">UTC+10:00</option><option value="11">UTC+11:00</option><option value="12">UTC+12:00</option><option value="13">UTC+13:00</option><option value="14">UTC+14:00</option><option value="-3">UTC−03:00</option><option value="-4">UTC−04:00</option><option value="-5">UTC−05:00</option><option value="-6">UTC−06:00</option><option value="-7">UTC−07:00</option><option value="-8">UTC−08:00</option><option value="-10">UTC−10:00</option><option value="-12">UTC−12:00</option></select></label>
+        <p class="micro">经纬度与时区独立；夏令时请手动选择对应 UTC 偏移。</p>
+      </section>
+      <section class="control-section layers">
+        <div class="section-title"><span><b>04</b> 显示图层</span><span class="tiny">LAYERS</span></div>
+        <label><span><i class="legend-dot mint"></i>天赤道 / 赤道面</span><input id="equator" type="checkbox" checked><span class="switch"></span></label>
+        <label><span><i class="legend-dot purple"></i>黄道 / 黄道面</span><input id="ecliptic" type="checkbox" checked><span class="switch"></span></label>
+        <label><span><i class="legend-dot gold"></i><span id="trailLabel">当天日月轨迹</span></span><input id="trails" type="checkbox" checked><span class="switch"></span></label>
+        <label><span><i class="legend-dot outline"></i>地球透明</span><input id="transparent" type="checkbox"><span class="switch"></span></label>
+        <label id="refractionRow"><span>大气折射修正</span><input id="refraction" type="checkbox" checked><span class="switch"></span></label>
+      </section>
+      <div class="accuracy-note"><span class="status-dot"></span><span>真实星历计算 · 完全离线可用</span><button id="accuracyButton" aria-label="查看精度说明">ⓘ</button></div>
+    </aside>
+    <section class="stage-column">
+      <div class="stage" id="stage">
+        <div id="canvasHost" role="img" aria-label="可拖动的三维日地月模拟场景" tabindex="0"></div>
+        <div id="labels" aria-hidden="true"></div>
+        <div class="scene-header"><div><span class="live-dot"></span><span id="sceneMode">地面观测站</span><h2 id="sceneLocation">北京的天空</h2><p id="sceneDate"></p></div><span class="scene-badge" id="sceneBadge">地平坐标系</span></div>
+        <div class="scene-tools"><button id="focusSun" title="看向太阳">☀ <span>太阳</span></button><button id="focusMoon" title="看向月亮">☾ <span>月亮</span></button><button id="resetView" title="重置视角">↺ <span>复位</span></button><button id="fullscreen" title="全屏">⛶</button></div>
+        <div id="sceneNotice" class="scene-notice" hidden></div>
+        <div class="scene-footer"><span id="interactionHint">拖动环顾天空 · 滚轮缩放 · 方向键转动</span><span id="cameraReadout">面向南方</span></div>
+        <div class="scale-note" id="scaleNote">日月图标适度放大，位置取天体中心；星点为示意背景。</div>
+        <div id="errorBox" class="error-box" hidden></div>
+      </div>
+      <div class="time-controller">
+        <button id="play" class="play-button" aria-label="播放时间" aria-pressed="false">▶</button>
+        <div class="timeline"><div class="timeline-head"><span>时间漫游 <b id="clockLabel"></b></span><span id="daySpan"></span></div><input id="daySlider" aria-label="当天时间" type="range" min="0" max="86399" step="1"><div class="range-ends"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div></div>
+        <label class="speed-label">播放速度<select id="speed"><option value="60">1 分钟 / 秒</option><option value="600" selected>10 分钟 / 秒</option><option value="3600">1 小时 / 秒</option><option value="86400">1 天 / 秒</option><option value="604800">1 周 / 秒</option></select></label>
+        <div class="day-step"><button id="previousDay" aria-label="前一天">−1 天</button><button id="nextDay" aria-label="后一天">+1 天</button></div>
+      </div>
+      <section class="readouts" aria-label="当前天文读数">
+        <article class="body-card sun-card"><div class="body-icon">☀</div><div class="body-data"><div class="body-title"><h3>太阳 <span>SUN</span></h3><span id="sunStatus" class="body-status"></span></div><div class="metrics"><div><span>高度角</span><strong id="sunAlt">—</strong></div><div><span>方位角</span><strong id="sunAz">—</strong></div><div><span>日出 / 日落</span><strong class="event-time" id="sunEvents">—</strong></div></div></div></article>
+        <article class="body-card moon-card"><div class="body-icon"><canvas id="moonPhase" width="80" height="80" aria-label="月相示意图"></canvas></div><div class="body-data"><div class="body-title"><h3>月亮 <span>MOON</span></h3><span id="moonStatus" class="body-status"></span></div><div class="metrics"><div><span>高度角</span><strong id="moonAlt">—</strong></div><div><span>方位角</span><strong id="moonAz">—</strong></div><div><span id="phaseName">月面照亮</span><strong id="moonLight">—</strong></div></div></div></article>
+      </section>
+      <footer class="bottom-note"><span id="coordinateNote">方位角：北 0° · 东 90° · 南 180° · 西 270°　|　高度角：地平线 0° · 天顶 90°</span><span id="moonDistance"></span></footer>
+    </section>
+  </main>
+  <div id="toast" role="status" hidden></div>
+  <dialog id="helpDialog"><button id="closeHelp" class="close-dialog" aria-label="关闭指南">×</button><div class="eyebrow">A SMALL GUIDE TO THE SKY</div><h2>从你的天空，走向太空。</h2>
+    <h3>第一次使用</h3><p>先选择城市，或拖动经纬度滑块。再选择日期、时间与显示时区，按播放键看日月移动。可直接双击 <code>index.html</code> 打开，不需要安装软件，也不需要联网。</p>
+    <h3>地面视角</h3><p>你站在观测地点，拖动画面可以环顾四周，滚轮可缩放。点击「太阳」或「月亮」追踪它。金色与银色曲线表示所选显示时区当天 00:00–24:00 的轨迹，每 5 分钟计算一次；曲线上的数字是小时。透明地球会显示地平线以下的日月和虚线轨迹。青色线是赤道面与天球的交线，紫色线是黄道面与天球的交线。</p>
+    <h3>太空视角</h3><p>「地球附近」保留太阳和月亮相对地心的真实方向，可看到赤道面、黄道面和观测地点。「太阳系」展示地球绕太阳公转及月亮绕地球的关系。拖动旋转，滚轮缩放。地球自转、地轴方向和日照方向随时间更新。</p><p>为同时看清三个天体，天体尺寸和距离分别缩放，<b>不按真实比例</b>；不要用画面中的圆盘重叠判断日月食。月球轨迹展示当前时刻前后约一个恒星月的真实采样位置，并非固定圆环。</p>
+    <h3>时间、坐标与精度</h3><p>所有计算使用 UTC，界面按你选择的固定 UTC 偏移显示。切换时区保留同一真实时刻；切换城市不自动更改时区。夏令时需手动选择。支持 1900–2100 年，观测海拔取 0 米，地平线假设平坦。</p><p>使用 <a href="https://github.com/cosinekitty/astronomy" target="_blank" rel="noreferrer">Astronomy Engine 2.1.19</a>（项目目标精度约 1 角分）。地面位置使用站心坐标、日期真赤道、光行差和可选标准大气折射，包含月球视差。太空使用日期真赤道坐标，黄道面按当日变换计算。几何参考面不受大气折射影响。</p><p>日出日落为标准折射条件下的日面上缘通过理想地平线，不随折射开关改变。大气和山地遮挡会改变实际观测；不承诺秒级事件精度。月相小图朝向为示意，照亮比例为计算值。背景星点仅为装饰。</p>
+    <h3>在 Mac 上使用与发布</h3><p>本地：双击项目中的 <code>index.html</code>。也可以在终端进入文件夹，输入 <code>python3 -m http.server 8000</code>，然后访问 <code>http://localhost:8000</code>。GitHub：上传项目文件，在仓库 Settings → Pages 中选择 Deploy from a branch，再选 main / (root) 并保存。详细步骤见 README。</p>
+    <p class="micro">地图：Natural Earth 公有领域。三维渲染：Three.js。完整许可证随项目附带。</p>
+  </dialog>
+</body>
+</html>

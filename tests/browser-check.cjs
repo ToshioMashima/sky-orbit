@@ -1,0 +1,35 @@
+// Optional UI smoke test: PLAYWRIGHT_MODULE=/path/to/playwright node tests/browser-check.cjs
+const assert = require('node:assert/strict');
+const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const base=process.env.SKY_BASE_URL || 'http://127.0.0.1:8000';
+(async()=>{
+  const browser=await chromium.launch({headless:true,channel:'chrome'});
+  const page=await browser.newPage({viewport:{width:1440,height:1000},deviceScaleFactor:1});
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(base+'/?date=2024-06-21T08:00:00Z');
+  await page.waitForFunction(()=>window.skySimulator);
+  const snap=()=>page.evaluate(()=>window.skySimulator.snapshot());
+  assert.equal((await snap()).day.samples,289);
+  await page.screenshot({path:'/tmp/sky-ground.png'});
+  const utc=(await snap()).state.date;
+  await page.selectOption('#timezone','-5');assert.equal((await snap()).state.date,utc);
+  assert.equal(await page.inputValue('#time'),'03:00:00');
+  await page.selectOption('#timezone','8');
+  await page.fill('#date','2024-12-21');await page.locator('#date').dispatchEvent('change');
+  await page.selectOption('#city','north');assert.equal((await snap()).day.rise,null);assert.ok((await snap()).current.sun.altitude<0);
+  await page.click('#focusSun');assert.ok(await page.locator('#sceneNotice').isVisible());
+  await page.check('#transparent');assert.match(await page.locator('#sceneNotice').textContent(),/透明/);
+  await page.uncheck('#ecliptic');await page.uncheck('#equator');await page.uncheck('#trails');
+  await page.check('#ecliptic');await page.check('#equator');await page.check('#trails');
+  await page.selectOption('#city','beijing');await page.fill('#date','2024-06-21');await page.locator('#date').dispatchEvent('change');
+  await page.fill('#time','16:00:00');await page.locator('#time').dispatchEvent('change');
+  await page.uncheck('#transparent');await page.click('#resetView');
+  await page.click('#spaceView');await page.screenshot({path:'/tmp/sky-space.png'});
+  await page.selectOption('#spaceScale','solar');await page.screenshot({path:'/tmp/sky-solar.png'});
+  await page.selectOption('#speed','86400');await page.click('#play');const before=Date.parse((await snap()).state.date);await page.waitForTimeout(600);await page.click('#play');assert.ok(Date.parse((await snap()).state.date)>before+20000000);
+  await page.click('#groundView');await page.click('#helpButton');assert.ok(await page.locator('#helpDialog').isVisible());await page.click('#closeHelp');
+  await page.setViewportSize({width:390,height:844});await page.screenshot({path:'/tmp/sky-mobile.png',fullPage:true});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
+  const filePage=await browser.newPage();filePage.on('pageerror',e=>errors.push(e.message));await filePage.goto('file://'+require('node:path').resolve(__dirname,'../index.html'));await filePage.waitForFunction(()=>window.skySimulator);assert.equal(await filePage.locator('#errorBox').isVisible(),false);await filePage.click('#spaceView');assert.ok((await filePage.evaluate(()=>window.skySimulator.snapshot())).current.sun);
+  assert.deepEqual(errors,[]);console.log('PASS: desktop, mobile, offline file, date/time, polar night, layers, views, playback; no page errors.');
+  await browser.close();
+})().catch(e=>{console.error(e);process.exit(1);});

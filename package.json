@@ -1,0 +1,7 @@
+{
+  "name": "sky-orbit",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Offline Sun–Earth–Moon simulator in Chinese, powered by Astronomy Engine",
+  "scripts": { "test": "node --test tests/astronomy.test.cjs", "start": "python3 -m http.server 8000" }
+}
